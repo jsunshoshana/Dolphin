@@ -89,6 +89,9 @@ drawOnGraphics: aGraphics at: dstOrigin extent: dstExtent from: srcOrigin extent
 		unit: aUnit
 		attributes: aImageAtt!
 
+hash
+	^super hash + tileColor hash!
+
 hotspot
 	^self extent / 2!
 
@@ -109,7 +112,7 @@ tileBitmapWithExtent: extent
 		at: Point zero
 		extent: extent
 		from: Point zero
-		extent: extent
+		extent: self extent
 		unit: nil
 		attributes: nil] 
 			ensure: [graphics free].
@@ -128,6 +131,7 @@ tileColor: aColor
 !InternalIcon categoriesFor: #bitmap!accessing!public! !
 !InternalIcon categoriesFor: #drawOn:at:extent:!drawing-bitmaps!public! !
 !InternalIcon categoriesFor: #drawOnGraphics:at:extent:from:extent:unit:attributes:!drawing-gdiplus!public! !
+!InternalIcon categoriesFor: #hash!comparing!comparison!public! !
 !InternalIcon categoriesFor: #hotspot!public! !
 !InternalIcon categoriesFor: #imageIndex!public! !
 !InternalIcon categoriesFor: #imageType!public! !
