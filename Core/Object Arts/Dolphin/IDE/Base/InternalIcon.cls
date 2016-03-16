@@ -1,7 +1,7 @@
 "Filed out from Dolphin Smalltalk 7"!
 
 InternalBitmap subclass: #InternalIcon
-	instanceVariableNames: ''
+	instanceVariableNames: 'tileColor'
 	classVariableNames: ''
 	poolDictionaries: 'GdiplusConstants'
 	classInstanceVariableNames: ''!
@@ -25,6 +25,14 @@ This will prompt you for a suitable image file (again PNG files work best) and w
 '!
 !InternalIcon categoriesForClass!Kernel-Objects! !
 !InternalIcon methodsFor!
+
+= comperand 
+	^super = comperand and: [self tileColor = comperand tileColor]!
+
+addToImageList: aWinImageList mask: aColorOrNil 
+	^(tileColor isNil ifTrue: [gdiplusBitmap] ifFalse: [self tileBitmapWithExtent: aWinImageList extent]) 
+		addToImageList: aWinImageList
+		mask: aColorOrNil!
 
 asAlphaBitmap: aPoint 
 	"Answer a 32-bpp bitmap (i.e. with Alpha channel) that contains the receiver's
@@ -57,6 +65,30 @@ asParameter
 
 	^self asIcon detachHandle!
 
+bitmap
+	^tileColor isNil ifTrue: [gdiplusBitmap] ifFalse: [self tileBitmapWithExtent: gdiplusBitmap extent]!
+
+drawOn: aCanvas at: dstOrigin extent: dstExtent 
+	tileColor ifNotNil: [aCanvas fillRectangle: (dstOrigin extent: dstExtent) color: tileColor].
+	self gdiplusBitmap 
+		drawOn: aCanvas
+		at: dstOrigin
+		extent: dstExtent!
+
+drawOnGraphics: aGraphics at: dstOrigin extent: dstExtent from: srcOrigin extent: srcExtent unit: aUnit attributes: aImageAtt 
+	tileColor 
+		ifNotNil: 
+			[aGraphics fillRectangle: (dstOrigin extent: dstExtent)
+				brush: (GdiplusSolidBrush color: tileColor asARGB)].
+	^self gdiplusBitmap 
+		drawOnGraphics: aGraphics
+		at: dstOrigin
+		extent: dstExtent
+		from: srcOrigin
+		extent: srcExtent
+		unit: aUnit
+		attributes: aImageAtt!
+
 hotspot
 	^self extent / 2!
 
@@ -64,13 +96,44 @@ imageIndex
 	^Icon imageManager indexOfImage: self!
 
 imageType
-	^Win32Constants.IMAGE_ICON! !
+	^Win32Constants.IMAGE_ICON!
+
+tileBitmapWithExtent: extent 
+	| tileBitmap graphics |
+	tileBitmap := GdiplusBitmap extent: extent.
+	graphics := tileBitmap graphics.
+	
+	[graphics interpolationMode: InterpolationModeHighQualityBicubic.
+	self 
+		drawOnGraphics: graphics
+		at: Point zero
+		extent: extent
+		from: Point zero
+		extent: extent
+		unit: nil
+		attributes: nil] 
+			ensure: [graphics free].
+	^tileBitmap!
+
+tileColor
+	^tileColor!
+
+tileColor: aColor 
+	tileColor := aColor! !
+!InternalIcon categoriesFor: #=!comparing!comparison!public! !
+!InternalIcon categoriesFor: #addToImageList:mask:!double dispatch!private! !
 !InternalIcon categoriesFor: #asAlphaBitmap:!converting!public! !
 !InternalIcon categoriesFor: #asMenuBitmap!converting!public! !
 !InternalIcon categoriesFor: #asParameter!public! !
+!InternalIcon categoriesFor: #bitmap!accessing!public! !
+!InternalIcon categoriesFor: #drawOn:at:extent:!drawing-bitmaps!public! !
+!InternalIcon categoriesFor: #drawOnGraphics:at:extent:from:extent:unit:attributes:!drawing-gdiplus!public! !
 !InternalIcon categoriesFor: #hotspot!public! !
 !InternalIcon categoriesFor: #imageIndex!public! !
 !InternalIcon categoriesFor: #imageType!public! !
+!InternalIcon categoriesFor: #tileBitmapWithExtent:!accessing!helpers!private! !
+!InternalIcon categoriesFor: #tileColor!accessing!private! !
+!InternalIcon categoriesFor: #tileColor:!accessing!private! !
 
 !InternalIcon class methodsFor!
 
@@ -84,15 +147,9 @@ badgeTile: anIconBadge color: aColor extent: extent
 	"Answer an instance of the receiver that is anIconBadge superimposed on a square tile of
 	aColor."
 
-	| bitmap |
-	bitmap := GdiplusBitmap extent: extent asPoint.
-	(bitmap graphics)
-		clear: aColor asARGB;
-		interpolationMode: InterpolationModeHighQualityBicubic;
-		drawImage: anIconBadge bitmap
-			at: Point zero
-			extent: bitmap extent.
-	^self fromGdiplusBitmap: bitmap!
+	^(self fromGdiplusBitmap: anIconBadge bitmap)
+		tileColor: aColor;
+		yourself!
 
 defaultExtent
 	^48 @ 48!
